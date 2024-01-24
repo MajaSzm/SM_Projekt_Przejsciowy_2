@@ -123,3 +123,27 @@ ggplot(eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = To
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   coord_flip() +  
   theme(legend.position="none")  
+
+konsumpcja_importerzy_long <- konsumpcja_importerzy %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
+print(konsumpcja_importerzy_long)
+
+konsumpcja_importerzy_long$Value <- round(konsumpcja_importerzy_long$Value / 1e6, 2)
+
+kraje_eu_konsumpcja <- konsumpcja_importerzy_long %>%
+  filter(trimws(Country) %in% kraje_eu)
+
+print(kraje_eu_konsumpcja)
+
+ggplot() +
+  geom_bar(data = kraje_eu_konsumpcja, aes(x = reorder(Country, -Value), y = Value, fill = "Import"), stat = "identity", position = "dodge") +
+  geom_bar(data = kraje_eu_df, aes(x = reorder(Country, Value), y = Value, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
+  labs(title = "Porównanie importu i konsumpcji kawy w Europie",
+       x = "Kraj",
+       y = "Miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip() +
+  scale_fill_manual(values = c("Import" = "blue", "Konsumpcja" = "red"), name = "Rodzaj") +
+  theme(legend.position = "top")
+###########################Produkcja############################################
