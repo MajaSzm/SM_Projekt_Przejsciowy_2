@@ -32,8 +32,7 @@ for (i in seq_along(lista_df)) {
 # wybranie top 10 eksporterów, producentów i importerów
 
 top_eksport <- eksport %>%
-  arrange(desc(Total_export)) %>%
-  head(10)
+  arrange(desc(Total_export)) 
 print(top_eksport)
 
 top_eksport <- top_eksport[, -ncol(top_eksport)]
