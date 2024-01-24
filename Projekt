@@ -146,4 +146,18 @@ ggplot() +
   coord_flip() +
   scale_fill_manual(values = c("Import" = "blue", "Konsumpcja" = "red"), name = "Rodzaj") +
   theme(legend.position = "top")
+
+###reeksport#####
+re_eksport_long <- re_eksport %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
+print(re_eksport_long)
+
+re_eksport_long$Value <- round(re_eksport_long$Value / 1e6, 2)
+
+re_eksport_eu <- re_eksport_long %>%
+  filter(trimws(Country) %in% kraje_eu)
+
+print(re_eksport_eu)
+
+
 ###########################Produkcja############################################
