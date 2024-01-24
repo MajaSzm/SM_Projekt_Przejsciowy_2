@@ -1,0 +1,72 @@
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+konsumpcja <- read_csv("Coffee_domestic_consumption.csv")
+eksport_old <- read.csv2("Coffee_export.csv")
+import <- read_csv("Coffee_import.csv")
+produkcja <- read_csv("Coffee_production.csv")
+re_eksport <- read_csv("Coffee_re_export.csv")
+konsumpcja_import <- read_csv("Coffee_importers_consumption.csv")
+stock_green <- read_csv("Coffee_green_coffee_inventorie.csv")
+
+eksport <- eksport_old %>%
+  rename_all(~ gsub("X", "", .))
+head(eksport)
+# sprawdzenie minusowych wartości w źródle
+lista_df <- list(konsumpcja, eksport, import, produkcja, re_eksport, konsumpcja_import, stock_green)
+
+# Iteruj przez listę
+for (i in seq_along(lista_df)) {
+  df <- lista_df[[i]]
+  wiersze_z_minusowymi <- df[rowSums(df < 0, na.rm = TRUE) > 0, ]
+  
+  if (nrow(wiersze_z_minusowymi) > 0) {
+    cat(paste("Minusowe wartości w zbiorze danych", i, ":\n"))
+    print(wiersze_z_minusowymi)
+  } else {
+    cat(paste("Brak minusowych wartości w zbiorze danych", i, "\n"))
+  }
+}
+#########################EKSPORT##############################
+# wybranie top 10 eksporterów, producentów i importerów
+
+top_eksport <- eksport %>%
+  arrange(desc(Total_export)) %>%
+  head(10)
+print(top_eksport)
+
+top_eksport <- top_eksport[, -ncol(top_eksport)]
+print(top_eksport)
+
+top_eksport_long <- top_eksport %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
+print(top_eksport_long)
+
+# dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
+top_eksport_long$Value <- round(top_eksport_long$Value / 1e6, 2)
+head(top_eksport_long)
+
+ggplot(top_eksport_long, aes(x = Year, y = Value, color = Country, group = Country)) +
+  geom_line() +
+  labs(title = "Eksport kawy w czasie",
+       x = "Rok",
+       y = "Wyeksportowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+library(zoo)
+window_size <- 5
+
+top_eksport_long <- top_eksport_long %>%
+  arrange(Country, Year) %>%
+  group_by(Country) %>%
+  mutate(Smoothed_Value = zoo::rollmean(Value, k = window_size, fill = NA, align = "right", na.rm = TRUE))
+
+ggplot(top_eksport_long, aes(x = Year, y = Smoothed_Value, color = Country, group = Country)) +
+  geom_line() +
+  labs(title = "Eksport kawy w czasie",
+       x = "Rok",
+       y = "Wyeksportowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
