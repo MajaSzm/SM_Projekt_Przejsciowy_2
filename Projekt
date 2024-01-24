@@ -70,3 +70,57 @@ ggplot(top_eksport_long, aes(x = Year, y = Smoothed_Value, color = Country, grou
        y = "Wyeksportowane miliony kilogramów") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+###############################IMPORT##########################################
+
+#zamiana na long format i wyfiltrowanie krajow europejskich (ze wzgledu na ich dominacje w tabeli)
+
+top_import <- import %>%
+  arrange(desc(Total_import)) 
+
+top_import <- top_import[, -ncol(top_import)]
+print(top_import)
+
+top_import_long <- top_import %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
+print(top_eksport_long)
+
+#dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
+top_import_long$Value <- round(top_import_long$Value / 1e6, 2)
+head(top_import_long)
+
+#filtrowanie krajow EU z zestawienia
+
+kraje_eu <- c(
+  'Austria', 'Belgium', 'Belgium/Luxembourg', 'Bulgaria', 'Croatia', 'Cyprus',
+  'Czechia', 'Denmark', 'Estonia', 'Finland', 'France', 'Germany', 'Greece',
+  'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta',
+  'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain'
+)
+
+kraje_eu_df <- top_import_long %>%
+  filter(trimws(Country) %in% kraje_eu)
+
+#Import europy w przebiegu czasu
+
+eu_total_import <- kraje_eu_df %>%
+  group_by(Year) %>%
+  summarise(Total_Imports = sum(Value))
+
+
+eu_country_total_import <- kraje_eu_df %>%
+  group_by(Country) %>%
+  summarise(Total_Imports = sum(Value)) %>%
+  arrange(desc(Total_Imports))
+
+print(eu_country_total_import)
+
+
+ggplot(eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = Total_Imports, fill = Country)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Najwięksi importerzy kawy w Europie",
+       x = "Kraj",
+       y = "Importowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip() +  
+  theme(legend.position="none")  
