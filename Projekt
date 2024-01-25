@@ -14,7 +14,7 @@ eksport <- eksport_old %>%
   rename_all(~ gsub("X", "", .))
 head(eksport)
 # sprawdzenie minusowych wartości w źródle
-lista_df <- list(konsumpcja, eksport, import, produkcja, re_eksport, konsumpcja_import, stock_green)
+lista_df <- list(konsumpcja, eksport, import, produkcja, re_eksport, konsumpcja_importerzy, stock_green)
 
 # Iteruj przez listę
 for (i in seq_along(lista_df)) {
