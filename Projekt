@@ -69,6 +69,7 @@ ggplot(top_eksport_long, aes(x = Year, y = Smoothed_Value, color = Country, grou
        y = "Wyeksportowane miliony kilogramów") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ###############################IMPORT##########################################
 
 #zamiana na long format i wyfiltrowanie krajow europejskich (ze wzgledu na ich dominacje w tabeli)
@@ -148,16 +149,26 @@ ggplot() +
   theme(legend.position = "top")
 
 ###reeksport#####
+###reeksport#####
+
+re_eksport <- re_eksport[, -ncol(re_eksport)]
+print(re_eksport)
+
 re_eksport_long <- re_eksport %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
 print(re_eksport_long)
 
+#dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
 re_eksport_long$Value <- round(re_eksport_long$Value / 1e6, 2)
+head(re_eksport_long)
 
-re_eksport_eu <- re_eksport_long %>%
-  filter(trimws(Country) %in% kraje_eu)
 
-print(re_eksport_eu)
-
+ggplot(re_eksport_long, aes(x = Year, y = Value, color = Country, group = Country)) +
+  geom_line() +
+  labs(title = "Reeksport kawy w czasie",
+       x = "Rok",
+       y = "Wyreeksportowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ###########################Produkcja############################################
