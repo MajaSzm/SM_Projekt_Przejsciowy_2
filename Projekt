@@ -148,8 +148,8 @@ ggplot() +
   scale_fill_manual(values = c("Import" = "blue", "Konsumpcja" = "red"), name = "Rodzaj") +
   theme(legend.position = "top")
 
-###reeksport#####
-###reeksport#####
+
+###reeksport##### DO POPRAWKI
 
 re_eksport <- re_eksport[, -ncol(re_eksport)]
 print(re_eksport)
@@ -158,7 +158,11 @@ re_eksport_long <- re_eksport %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
 print(re_eksport_long)
 
-#dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
+
+top_re_eksport <- re_eksport %>%
+  arrange(desc(Total_re_export)) %>%
+  head(10)
+
 re_eksport_long$Value <- round(re_eksport_long$Value / 1e6, 2)
 head(re_eksport_long)
 
@@ -170,5 +174,11 @@ ggplot(re_eksport_long, aes(x = Year, y = Value, color = Country, group = Countr
        y = "Wyreeksportowane miliony kilogramów") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+top_re_eksport_long <- top_re_eksport %>%
+  mutate(across(everything(), as.character)) %>%  # konwersja kolumny to char
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value") %>%
+print(top_re_eksport_long)
 
 ###########################Produkcja############################################
