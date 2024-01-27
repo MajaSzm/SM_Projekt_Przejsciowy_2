@@ -182,3 +182,14 @@ top_re_eksport_long <- top_re_eksport %>%
 print(top_re_eksport_long)
 
 ###########################Produkcja############################################
+
+########################Konsumpcja a populacja ? korelacja?######################################
+
+#############Produkcja a zmiany klimatyczne###############################
+
+############# Robusta vs Arabica#########################
+
+##############Prognozowanie Cen? ale potrzebne bylby jakies ceny##################################
+
+
+###############rozmieszczenie top 10/20 producentow na mapie + plus importerzy#######################
