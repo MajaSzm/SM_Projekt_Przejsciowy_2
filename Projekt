@@ -10,13 +10,11 @@ re_eksport <- read_csv("Coffee_re_export.csv")
 konsumpcja_import <- read_csv("Coffee_importers_consumption.csv")
 stock_green <- read_csv("Coffee_green_coffee_inventorie.csv")
 
-eksport <- eksport_old %>%
-  rename_all(~ gsub("X", "", .))
-head(eksport)
-# sprawdzenie minusowych wartości w źródle
-lista_df <- list(konsumpcja, eksport, import, produkcja, re_eksport, konsumpcja_importerzy, stock_green)
 
-# Iteruj przez listę
+#sprawdzenie minusowych wartości w źródle
+lista_df <- list(konsumpcja, eksport_old, import, produkcja, re_eksport, konsumpcja_importerzy, stock_green)
+
+
 for (i in seq_along(lista_df)) {
   df <- lista_df[[i]]
   wiersze_z_minusowymi <- df[rowSums(df < 0, na.rm = TRUE) > 0, ]
@@ -28,16 +26,22 @@ for (i in seq_along(lista_df)) {
     cat(paste("Brak minusowych wartości w zbiorze danych", i, "\n"))
   }
 }
-#########################EKSPORT##############################
-# wybranie top 10 eksporterów, producentów i importerów
 
+#########################EKSPORT##############################
+eksport <- eksport_old %>%
+  rename_all(~ gsub("X", "", .))
+head(eksport)
+
+#posortowanie eksporterów
 top_eksport <- eksport %>%
-  arrange(desc(Total_export)) 
+  arrange(desc(Total_export)) %>%
+  head(15)
 print(top_eksport)
 
 top_eksport <- top_eksport[, -ncol(top_eksport)]
 print(top_eksport)
 
+#zmiana formatu z "szerokiego" na "długi"
 top_eksport_long <- top_eksport %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
 print(top_eksport_long)
@@ -54,6 +58,7 @@ ggplot(top_eksport_long, aes(x = Year, y = Value, color = Country, group = Count
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+#obliczenie średniej ruchomej
 library(zoo)
 window_size <- 5
 
@@ -67,6 +72,47 @@ ggplot(top_eksport_long, aes(x = Year, y = Smoothed_Value, color = Country, grou
   labs(title = "Eksport kawy w czasie",
        x = "Rok",
        y = "Wyeksportowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+#Sprawdzenie przy pomocy regresji liniowej czy Wietnam może wyprzedzić Brazylię 
+
+vietnam <- top_eksport_long %>%
+  filter(Country == "Viet Nam")
+
+brazil <- top_eksport_long %>%
+  filter(Country =="Brazil")
+
+vietnam$Year <- as.numeric(as.character(vietnam$Year))
+brazil$Year <- as.numeric(as.character(brazil$Year))
+
+vietnam$Value <- round(vietnam$Value / 1e6, 2)
+brazil$Value <- round(brazil$Value / 1e6, 2)
+
+model_vietnam <- lm(Value  ~ Year, data = vietnam)
+model_brazil <- lm(Value  ~ Year, data = brazil)
+
+latest_year <- max(c(vietnam$Year, brazil$Year))
+przyszle_lata <- data.frame(Year = (latest_year + 1):(latest_year + 10))
+
+prognoza_vietnam <- predict(model_vietnam, newdata = przyszle_lata)
+prognoza_brazil <- predict(model_brazil, newdata = przyszle_lata)
+
+future_data <- data.frame(
+  Year = rep(przyszle_lata$Year, 2),
+  Value = c(prognoza_vietnam, prognoza_brazil),
+  Country = rep(c("Viet Nam", "Brazil"), each = length(przyszle_lata$Year))
+)
+
+#Konwersja lat na liczby całkowite
+future_data$Year <- as.integer(future_data$Year)
+
+ggplot(future_data, aes(x = Year, y = Value, color = Country)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(from = min(future_data$Year), to = max(future_data$Year), by = 1)) +  # Równomierne podziały na osi x
+  labs(title = "Prognozowany eksport kawy dla Wietnamu i Brazylii ",
+       x = "Rok",
+       y = "Wyeksportowane miliony kilogramów ") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
