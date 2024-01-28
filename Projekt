@@ -2,19 +2,20 @@ library(readr)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
+
 konsumpcja <- read_csv("Coffee_domestic_consumption.csv")
 eksport_old <- read.csv2("Coffee_export.csv")
 import <- read_csv("Coffee_import.csv")
 produkcja <- read_csv("Coffee_production.csv")
 re_eksport <- read_csv("Coffee_re_export.csv")
-konsumpcja_import <- read_csv("Coffee_importers_consumption.csv")
+konsumpcja_importerzy <- read_csv("Coffee_importers_consumption.csv")
 stock_green <- read_csv("Coffee_green_coffee_inventorie.csv")
 
 
-#sprawdzenie minusowych wartości w źródle
+# sprawdzenie minusowych wartości w źródle
 lista_df <- list(konsumpcja, eksport_old, import, produkcja, re_eksport, konsumpcja_importerzy, stock_green)
 
-
+# Iteruj przez listę
 for (i in seq_along(lista_df)) {
   df <- lista_df[[i]]
   wiersze_z_minusowymi <- df[rowSums(df < 0, na.rm = TRUE) > 0, ]
@@ -26,7 +27,6 @@ for (i in seq_along(lista_df)) {
     cat(paste("Brak minusowych wartości w zbiorze danych", i, "\n"))
   }
 }
-
 #########################EKSPORT##############################
 eksport <- eksport_old %>%
   rename_all(~ gsub("X", "", .))
@@ -46,7 +46,7 @@ top_eksport_long <- top_eksport %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
 print(top_eksport_long)
 
-# dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
+#dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
 top_eksport_long$Value <- round(top_eksport_long$Value / 1e6, 2)
 head(top_eksport_long)
 
@@ -57,7 +57,6 @@ ggplot(top_eksport_long, aes(x = Year, y = Value, color = Country, group = Count
        y = "Wyeksportowane miliony kilogramów") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
 
 #obliczenie średniej ruchomej
 library(zoo)
@@ -114,6 +113,8 @@ ggplot(future_data, aes(x = Year, y = Value, color = Country)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+
+
 ###############################IMPORT##########################################
 
 #zamiana na long format i wyfiltrowanie krajow europejskich (ze wzgledu na ich dominacje w tabeli)
@@ -126,7 +127,7 @@ print(top_import)
 
 top_import_long <- top_import %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
-print(top_eksport_long)
+print(top_import_long)
 
 #dzielenie kolumny Value przez 1000000 i zaokraglenie do dwoch miejsc po przecinku
 top_import_long$Value <- round(top_import_long$Value / 1e6, 2)
@@ -140,6 +141,9 @@ kraje_eu <- c(
   'Hungary', 'Ireland', 'Italy', 'Latvia', 'Lithuania', 'Luxembourg', 'Malta',
   'Netherlands', 'Poland', 'Portugal', 'Romania', 'Slovakia', 'Slovenia', 'Spain'
 )
+
+import_eu <- import %>%
+  filter(trimws(Country) %in% kraje_eu)
 
 kraje_eu_df <- top_import_long %>%
   filter(trimws(Country) %in% kraje_eu)
@@ -159,6 +163,7 @@ eu_country_total_import <- kraje_eu_df %>%
 print(eu_country_total_import)
 
 
+
 ggplot(eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = Total_Imports, fill = Country)) +
   geom_bar(stat = "identity") +
   labs(title = "Najwięksi importerzy kawy w Europie",
@@ -169,49 +174,99 @@ ggplot(eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = To
   coord_flip() +  
   theme(legend.position="none")  
 
+
+konsumpcja_importerzy <- konsumpcja_importerzy[, -ncol(konsumpcja_importerzy)]
+
 konsumpcja_importerzy_long <- konsumpcja_importerzy %>%
   pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
 print(konsumpcja_importerzy_long)
 
-konsumpcja_importerzy_long$Value <- round(konsumpcja_importerzy_long$Value / 1e6, 2)
 
-kraje_eu_konsumpcja <- konsumpcja_importerzy_long %>%
+total_konsumpcja_importerzy <- konsumpcja_importerzy_long %>%
+  group_by(Country) %>%
+  summarise(Total_Consum = sum(Value)) %>%
+  arrange(desc(Total_Consum))
+
+print(total_konsumpcja_importerzy)
+
+total_konsumpcja_importerzy$Total_Consum <- round(total_konsumpcja_importerzy$Total_Consum / 1e6, 2)
+
+kraje_eu_total_konsumpcja <- total_konsumpcja_importerzy %>%
   filter(trimws(Country) %in% kraje_eu)
 
-print(kraje_eu_konsumpcja)
+print(kraje_eu_total_konsumpcja)
+
+
+kraje_eu_total_konsumpcja <- kraje_eu_total_konsumpcja[, -ncol(kraje_eu_total_konsumpcja)]
+
+print(kraje_eu_total_konsumpcja)
+
+
+#################DO POPRAWY############################
 
 ggplot() +
-  geom_bar(data = kraje_eu_konsumpcja, aes(x = reorder(Country, -Value), y = Value, fill = "Import"), stat = "identity", position = "dodge") +
-  geom_bar(data = kraje_eu_df, aes(x = reorder(Country, Value), y = Value, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
+  geom_bar(data = kraje_eu_total_konsumpcja, aes(x = reorder(Country, -Total_Consum), y = Total_Consum, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
+  geom_bar(data = eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = Total_Imports, fill = "Import"), stat = "identity", position = "dodge") +
   labs(title = "Porównanie importu i konsumpcji kawy w Europie",
        x = "Kraj",
        y = "Miliony kilogramów") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   coord_flip() +
-  scale_fill_manual(values = c("Import" = "blue", "Konsumpcja" = "red"), name = "Rodzaj") +
+  scale_fill_manual(values = c("Import" = "#7FDBFF", "Konsumpcja" = "#FF4136"), name = "Rodzaj") +
   theme(legend.position = "top")
 
+konsumpcja_eu2 <- konsumpcja_importerzy[, -ncol(konsumpcja_importerzy)]
 
-###reeksport##### DO POPRAWKI
+konsumpcja_eu2_long <- konsumpcja_eu2 %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value") %>%
+  filter(trimws(Country) %in% kraje_eu)
 
-re_eksport <- re_eksport[, -ncol(re_eksport)]
-print(re_eksport)
+print(konsumpcja_eu2_long)
+print(kraje_eu_df)
 
-re_eksport_long <- re_eksport %>%
-  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value")
-print(re_eksport_long)
+length(kraje_eu_df$Value)
+length(konsumpcja_eu2_long$Value)
+
+colnames(kraje_eu_df)[colnames(kraje_eu_df) == "Value"] <- "Value_Import"
+colnames(konsumpcja_eu2_long)[colnames(konsumpcja_eu2_long) == "Value"] <- "Value_Konsumpcja"
+
+polaczone_dane <- merge(konsumpcja_eu2_long, kraje_eu_df, by = c("Country", "Year"), all = TRUE)
+
+print(polaczone_dane)
+
+polaczone_dane2 <- dplyr::left_join(konsumpcja_eu2_long, kraje_eu_df, by = c("Country", "Year"))
+
+print(polaczone_dane2)
+
+wspólne_wiersze <- intersect(row.names(kraje_eu_df), row.names(konsumpcja_eu2_long))
+kraje_eu_df <- kraje_eu_df[wspólne_wiersze, ]
+konsumpcja_eu2_long <- konsumpcja_eu2_long[wspólne_wiersze, ]
+
+korelacja_import_konsumpcja <- cor(polaczone_dane2$Value_Konsumpcja, polaczone_dane2$Value_Konsumpcja)
+
+print(korelacja_import_konsumpcja)
+###reeksport#####
 
 
 top_re_eksport <- re_eksport %>%
   arrange(desc(Total_re_export)) %>%
   head(10)
 
-re_eksport_long$Value <- round(re_eksport_long$Value / 1e6, 2)
-head(re_eksport_long)
+re_eksport <- re_eksport[, -ncol(re_eksport)]
+print(re_eksport)
+
+re_eksport_long_eu <- re_eksport %>%
+  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value") %>%
+  filter(trimws(Country) %in% kraje_eu)
+
+print(re_eksport_long_eu)
 
 
-ggplot(re_eksport_long, aes(x = Year, y = Value, color = Country, group = Country)) +
+re_eksport_long_eu$Value <- round(re_eksport_long_eu$Value / 1e6, 2)
+head(re_eksport_long_eu)
+
+ggplot(re_eksport_long_eu, aes(x = Year, y = Value, color = Country, group = Country)) +
   geom_line() +
   labs(title = "Reeksport kawy w czasie",
        x = "Rok",
@@ -219,21 +274,234 @@ ggplot(re_eksport_long, aes(x = Year, y = Value, color = Country, group = Countr
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+top10_countries <- re_eksport_long_eu %>%
+  group_by(Country) %>%
+  summarize(Total_Export = sum(Value)) %>%
+  arrange(desc(Total_Export)) %>%
+  slice(1:10) %>%
+  pull(Country)
 
-top_re_eksport_long <- top_re_eksport %>%
-  mutate(across(everything(), as.character)) %>%  # konwersja kolumny to char
-  pivot_longer(cols = -Country, names_to = "Year", values_to = "Value") %>%
-print(top_re_eksport_long)
+# dane  dla top 10 krajów
+re_eksport_top10 <- re_eksport_long_eu %>%
+  filter(Country %in% top10_countries)
 
-###########################Produkcja############################################
-
-########################Konsumpcja a populacja ? korelacja?######################################
-
-#############Produkcja a zmiany klimatyczne###############################
-
-############# Robusta vs Arabica#########################
-
-##############Prognozowanie Cen? ale potrzebne bylby jakies ceny##################################
+ggplot(re_eksport_top10, aes(x = Year, y = Value, color = Country, group = Country)) +
+  geom_line() +
+  labs(title = "Reeksport kawy w czasie",
+       x = "Rok",
+       y = "Wyreksportowane miliony kilogramów") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
-###############rozmieszczenie top 10/20 producentow na mapie + plus importerzy#######################
+###########################Produkcja############################################ (https://www.kaggle.com/code/thaynangamarano/coffee-market-analysis), (https://www.kaggle.com/code/xsxs301163com/coffee-dataset-eda)
+head(produkcja)
+
+top_produkcja <- produkcja %>%
+  arrange(desc(Total_production)) %>%
+  head(10) %>%
+  select(Country, `Coffee type`, Total_production)
+
+top_produkcja$Total_production <- round(top_produkcja$Total_production / 1e6, 2)
+
+print(top_produkcja)
+
+
+ggplot(top_produkcja, aes(x = Country, y = Total_production, f)) +
+  geom_bar(stat = "identity", fill = "#7FDBFF") +
+  labs(title = 'Top 10 krajów produkujących kawę',
+       x = 'Countries',
+       y = 'Produkcja miliony kilogramów') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  coord_flip() +  # Obróć osie dla lepszej czytelności
+  theme(plot.title = element_text(hjust = 0.5))  # Wyśrodkuj tytuł
+
+
+
+##############GATUNEK####################
+
+top_gatunek <- produkcja %>%
+  group_by(`Coffee type`) %>%
+  summarise(Total_production = sum(Total_production)) %>%
+  arrange(desc(Total_production))
+
+print(top_gatunek)
+
+top_gatunek$Total_production <- round(top_gatunek$Total_production / 1e6, 2)
+
+print(top_gatunek)
+
+colnames(top_gatunek)[colnames(top_gatunek) == "Coffee type"] <- "Coffee_type"
+
+ggplot(top_gatunek, aes(x = Coffee_type, y = Total_production)) +
+  geom_bar(stat = "identity", fill = "#7FDBFF") +
+  labs(title = 'Produkcja kawy w podziale na gatunki',
+       x = 'Coffee Type',
+       y = 'Total Production') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+head(produkcja)
+
+top_produkcja2 <- produkcja %>%
+  arrange(desc(Total_production)) %>%
+  head(10)
+
+print(top_produkcja2)
+
+
+top_produkcja2 <- top_produkcja2[, -ncol(top_produkcja2)]
+
+top_produkcja_long <- top_produkcja2 %>%
+  pivot_longer(cols = -c(Country, `Coffee type`), names_to = "Year", values_to = "Value")
+
+print(top_produkcja_long)
+
+
+top_produkcja_long$Value <- round(top_produkcja_long$Value / 1e6, 2)
+
+
+ggplot(top_produkcja_long, aes(x = Year, y = Value, color = Country, group = Country)) +
+  geom_line() +
+  labs(title = "Produkcja kawy w czasie",
+       x = "Rok",
+       y = "Wyprodukowane kilogramy kawy") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+ggplot(top_produkcja_long, aes(x = Country, y = Total_production, fill = `Coffee type`)) +
+  geom_bar(stat = "identity") +
+  labs(title = 'Top producenci kawy ',
+       x = 'Country',
+       y = 'Total Production') +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_brewer(palette = "Set3")
+
+##########################Ogólna konsumpcja#################
+head(konsumpcja)
+
+top_konsumpcja <- konsumpcja %>%
+  arrange(desc(Total_domestic_consumption)) %>%
+  head(10)
+
+print(top_konsumpcja)
+
+pokrywajace <- intersect(top_konsumpcja$Country, top_produkcja$Country)
+
+print(pokrywajace)
+
+korelacja_produkcja_konsumpcja <- merge(konsumpcja, produkcja, by = "Country")
+
+korelacja2 <- cor(korelacja_produkcja_konsumpcja$Total_production, korelacja_produkcja_konsumpcja$Total_domestic_consumption)
+
+print(paste("Korelacja:", korelacja2))
+
+tylko_produkcja_konsumpcja <- korelacja_produkcja_konsumpcja %>%
+select(Country, Total_production, Total_domestic_consumption)
+
+head(tylko_produkcja_konsumpcja)
+
+top_10 <- tylko_produkcja_konsumpcja %>%
+  top_n(10, Total_production)
+
+print(top_10)
+
+ggplot(top_10, aes(x = Country)) +
+  geom_bar(aes(y = Total_production, fill = "Produkcja"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = Total_domestic_consumption, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
+  labs(title = "Porównanie produkcji i konsumpcji kawy",
+       x = "Kraj",
+       y = "Wartość") +
+  scale_fill_manual(values = c("Produkcja" = "blue", "Konsumpcja" = "orange")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+dane_procentowe <- transform(top_10, Procent_spozycia = (Total_domestic_consumption / Total_production) * 100)
+
+# Stwórz wykres słupkowy procentowy
+ggplot(dane_procentowe, aes(x = Country, y = Procent_spozycia, fill = Country)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Procentowa konsumpcja kawy w stosunku do produkcji",
+       x = "Kraj",
+       y = "Procent spożycia") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+############# Robusta vs Arabica######################### (https://www.kaggle.com/code/akhiljethwa/coffee-extensive-eda), (https://www.kaggle.com/code/xsxs301163com/coffee-dataset-eda)
+
+produkcja2 <- produkcja[, -ncol(produkcja)]
+
+produkcja2_long <- produkcja2 %>%
+  pivot_longer(cols = -c(Country, `Coffee type`), names_to = "Year", values_to = "Value")
+
+
+head(produkcja2_long)
+
+colnames(produkcja2_long)[colnames(produkcja2_long) == "Coffee type"] <- "Coffee_type"
+print(produkcja2_long)
+
+sumy_produkcji <- produkcja2_long %>%
+  group_by(Coffee_type, Year, .groups = "drop") %>%
+  summarise(Total_Production = sum(Value))
+
+ggplot(sumy_produkcji, aes(x = Year, y = Total_Production, color = Coffee_type, group = Coffee_type)) +
+  geom_line() +
+  labs(title = "Produkcja kawy w zależności od typu na przestrzeni lat",
+       x = "Rok",
+       y = "Produkcja") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+################DO POPRAWY#######################
+###############TOP PRODUCENCI I IMPORTERZY MAPA#######################
+
+library(leaflet)
+library(sf)
+library(countrycode)
+library(rnaturalearth)
+
+# Dane o producentach
+producenci <- data.frame(
+  Country = c("Brazil", "Vietnam", "Colombia", "Indonesia", "Ethiopia", "India", "Mexico", "Guatemala", "Honduras", "Uganda"),
+  Type = "Producent"
+)
+
+# Dane o importerach
+importerzy <- data.frame(
+  Country = c("USA", "Germany", "Italy", "Japan", "France", "Spain", "UK", "Belgium", "Netherlands", "Russia"),
+  Type = "Importer"
+)
+
+# Połączenie danych
+dane_mapa <- rbind(producenci, importerzy)
+
+# Pobranie danych geograficznych
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# Dopasowanie kodów krajów
+dane_mapa$iso_a3 <- countrycode(dane_mapa$Country, "country.name", "iso3c")
+
+# Połączenie danych geograficznych z danymi o producentach i importerach
+dane_mapa_geo <- merge(world, dane_mapa, by.x = "iso_a3", by.y = "iso_a3")
+
+# Tworzenie interaktywnej mapy
+mapa <- leaflet(dane_mapa_geo) %>%
+  addTiles() %>% # Dodaj podstawową mapę
+  addCircleMarkers(
+    lat = ~latitude,
+    lng = ~longitude,
+    radius = 8, # Stały rozmiar punktów
+    color = ~ifelse(Type == "Producent", "green", "blue"), # Kolor w zależności od typu
+    popup = ~paste(Country, "<br>", "Typ:", Type),
+    label = ~Country
+  )
+
+# Wyświetlenie mapy
+mapa
+
