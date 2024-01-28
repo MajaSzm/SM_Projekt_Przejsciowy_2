@@ -58,24 +58,24 @@ ggplot(top_eksport_long, aes(x = Year, y = Value, color = Country, group = Count
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+
 #obliczenie średniej ruchomej
 library(zoo)
 window_size <- 5
 
-top_eksport_long <- top_eksport_long %>%
+top_eksport_srednia_long <- top_eksport_long %>%
   arrange(Country, Year) %>%
   group_by(Country) %>%
   mutate(Smoothed_Value = zoo::rollmean(Value, k = window_size, fill = NA, align = "right", na.rm = TRUE))
 
-ggplot(top_eksport_long, aes(x = Year, y = Smoothed_Value, color = Country, group = Country)) +
+ggplot(top_eksport_srednia_long, aes(x = Year, y = Smoothed_Value, color = Country, group = Country)) +
   geom_line() +
   labs(title = "Eksport kawy w czasie",
        x = "Rok",
-       y = "Wyeksportowane miliony kilogramów") +
+       y = "Wyeksportowane miliony kilogramów - ") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-#Sprawdzenie przy pomocy regresji liniowej czy Wietnam może wyprzedzić Brazylię 
 
 vietnam <- top_eksport_long %>%
   filter(Country == "Viet Nam")
@@ -86,8 +86,6 @@ brazil <- top_eksport_long %>%
 vietnam$Year <- as.numeric(as.character(vietnam$Year))
 brazil$Year <- as.numeric(as.character(brazil$Year))
 
-vietnam$Value <- round(vietnam$Value / 1e6, 2)
-brazil$Value <- round(brazil$Value / 1e6, 2)
 
 model_vietnam <- lm(Value  ~ Year, data = vietnam)
 model_brazil <- lm(Value  ~ Year, data = brazil)
