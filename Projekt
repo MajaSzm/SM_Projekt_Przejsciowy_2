@@ -201,21 +201,6 @@ kraje_eu_total_konsumpcja <- kraje_eu_total_konsumpcja[, -ncol(kraje_eu_total_ko
 
 print(kraje_eu_total_konsumpcja)
 
-
-#################DO POPRAWY############################
-
-ggplot() +
-  geom_bar(data = kraje_eu_total_konsumpcja, aes(x = reorder(Country, -Total_Consum), y = Total_Consum, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
-  geom_bar(data = eu_country_total_import, aes(x = reorder(Country, -Total_Imports), y = Total_Imports, fill = "Import"), stat = "identity", position = "dodge") +
-  labs(title = "Porównanie importu i konsumpcji kawy w Europie",
-       x = "Kraj",
-       y = "Miliony kilogramów") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  coord_flip() +
-  scale_fill_manual(values = c("Import" = "#7FDBFF", "Konsumpcja" = "#FF4136"), name = "Rodzaj") +
-  theme(legend.position = "top")
-
 konsumpcja_eu2 <- konsumpcja_importerzy[, -ncol(konsumpcja_importerzy)]
 
 konsumpcja_eu2_long <- konsumpcja_eu2 %>%
@@ -243,9 +228,25 @@ wspólne_wiersze <- intersect(row.names(kraje_eu_df), row.names(konsumpcja_eu2_l
 kraje_eu_df <- kraje_eu_df[wspólne_wiersze, ]
 konsumpcja_eu2_long <- konsumpcja_eu2_long[wspólne_wiersze, ]
 
-korelacja_import_konsumpcja <- cor(polaczone_dane2$Value_Konsumpcja, polaczone_dane2$Value_Konsumpcja)
 
-print(korelacja_import_konsumpcja)
+
+# Tworzymy wykres
+ggplot(head(summarized_kon_imp_data[order(-summarized_kon_imp_data$Total_Imports),], 10), aes(x = Country)) +
+  geom_bar(aes(y = Total_Imports, fill = "Import"), stat = "identity", position = "dodge") +
+  geom_bar(aes(y = Value_Konsumpcja, fill = "Konsumpcja"), stat = "identity", position = "dodge") +
+  labs(title = "Porównanie produkcji i konsumpcji kawy w top 10 importerach kawy w krajach europejskich",
+       x = "Kraj",
+       y = "Wartość") +
+  scale_fill_manual(values = c("Import" = "blue", "Konsumpcja" = "orange")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Obliczamy korelację
+correlation_eu <- cor(summarized_kon_imp_data$Total_Imports, summarized_kon_imp_data$Value_Konsumpcja)
+
+# Wyświetlamy wynik
+print(correlation_eu)
+
 ###reeksport#####
 
 
